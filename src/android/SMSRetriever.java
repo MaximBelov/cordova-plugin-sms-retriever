@@ -44,7 +44,8 @@ public class SMSRetriever extends CordovaPlugin {
 
 	private static String LOG_TAG;
 	private static boolean STARTED = false;
-	private CallbackContext callbackContext;
+
+	private CallbackContext startWatchCallbackContext;
 	private SmsRetrieverClient smsRetrieverClient;
 
 	private static final String ACTION_START_WATCH = "startWatch";
@@ -70,19 +71,17 @@ public class SMSRetriever extends CordovaPlugin {
 	}
 
 	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-		PluginResult result = null;
-		this.callbackContext = callbackContext;
 
 		Log.i(LOG_TAG, String.format("Executing the %s action started", action));
 		if (action.equals(ACTION_START_WATCH)) {
 			this.startWatch(callbackContext);
+		} else if (action.equals(ACTION_STOP_WATCH)) {
+			this.stopWatch(callbackContext);
 		} else if (action.equals(ACTION_GET_SIGNATURE)) {
 			this.getHashString(callbackContext);
-		}  else if (action.equals(ACTION_STOP_WATCH)) {
-			this.stopWatch(callbackContext);
 		} else {
 			Log.w(LOG_TAG, String.format("Invalid action passed: %s", action));
-			result = new PluginResult(PluginResult.Status.INVALID_ACTION);
+			PluginResult result = new PluginResult(PluginResult.Status.INVALID_ACTION);
 			callbackContext.sendPluginResult(result);
 		}
 		return true;
@@ -112,6 +111,7 @@ public class SMSRetriever extends CordovaPlugin {
 				result.setKeepCallback(true);
 				callbackContext.sendPluginResult(result);
 			}else{
+				this.startWatchCallbackContext = callbackContext;
 				Task<Void> task = smsRetrieverClient.startSmsRetriever();
 
 				// Listen for success/failure of the start Task.
@@ -160,6 +160,11 @@ public class SMSRetriever extends CordovaPlugin {
 	private void stopWatch(final CallbackContext callbackContext){
 		cordova.getActivity().getApplicationContext().unregisterReceiver(SmsBrReceiver);
 		STARTED = false;
+		if(startWatchCallbackContext != null){
+			PluginResult result = new PluginResult(PluginResult.Status.OK, "SMS_RETRIEVER_DONE");
+			result.setKeepCallback(false);
+			startWatchCallbackContext.sendPluginResult(result);
+		}
 		PluginResult result = new PluginResult(PluginResult.Status.OK, "SMS_RETRIEVER_DONE");
 		callbackContext.sendPluginResult(result);
 	}
@@ -203,10 +208,10 @@ public class SMSRetriever extends CordovaPlugin {
 						try {
 							item.put("sms", smsMessage);
 							PluginResult result = new PluginResult(PluginResult.Status.OK, item);
-							callbackContext.sendPluginResult(result);
+							startWatchCallbackContext.sendPluginResult(result);
 						} catch (JSONException e) {
 							Log.e(LOG_TAG, e.getMessage(), e);
-							callbackContext.error(e.getMessage());
+							startWatchCallbackContext.error(e.getMessage());
 						}
 
 						break;
@@ -216,7 +221,7 @@ public class SMSRetriever extends CordovaPlugin {
 						Log.w(LOG_TAG, "TIMEOUT");
 						STARTED = false;
 						PluginResult resultTimeout = new PluginResult(PluginResult.Status.ERROR, "TIMEOUT");
-						callbackContext.sendPluginResult(resultTimeout);
+						startWatchCallbackContext.sendPluginResult(resultTimeout);
 
 						break;
 				}
