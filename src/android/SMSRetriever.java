@@ -49,6 +49,7 @@ public class SMSRetriever extends CordovaPlugin {
 
 	private static final String ACTION_START_WATCH = "startWatch";
 	private static final String ACTION_GET_SIGNATURE = "getHashString";
+	private static final String ACTION_STOP_WATCH = "stopWatch";
 
 	/* AppSignatureHelper */
 	private static final String HASH_TYPE = "SHA-256";
@@ -77,6 +78,8 @@ public class SMSRetriever extends CordovaPlugin {
 			this.startWatch(callbackContext);
 		} else if (action.equals(ACTION_GET_SIGNATURE)) {
 			this.getHashString(callbackContext);
+		}  else if (action.equals(ACTION_STOP_WATCH)) {
+			this.stopWatch(callbackContext);
 		} else {
 			Log.w(LOG_TAG, String.format("Invalid action passed: %s", action));
 			result = new PluginResult(PluginResult.Status.INVALID_ACTION);
@@ -152,6 +155,13 @@ public class SMSRetriever extends CordovaPlugin {
 			PluginResult result = new PluginResult(PluginResult.Status.ERROR, e.getMessage());
 			callbackContext.sendPluginResult(result);
 		}
+	}
+
+	private void stopWatch(final CallbackContext callbackContext){
+		cordova.getActivity().getApplicationContext().unregisterReceiver(SmsBrReceiver);
+		STARTED = false;
+		PluginResult result = new PluginResult(PluginResult.Status.OK, "SMS_RETRIEVER_DONE");
+		callbackContext.sendPluginResult(result);
 	}
 
 	/**
